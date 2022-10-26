@@ -62,6 +62,7 @@ struct LinkData{
     ChVector<> origin_xyz;
     ChVector<> origin_rpy;
     ChVector<> dim;   // size, for dynamics and primitive visualization
+    std::string meshname;
 };
 
 // joint data from urdf file (relative coordinate formulation)
@@ -75,27 +76,27 @@ struct JointData{
 };
 
 const int numLinks = 8;
-const int numJoints = 7;
+const int numJoints = 3;
 
 LinkData scorbot_links[] = {
-    {"link0", ChVector<>(0.27, 0, 0.469), ChVector<>(0, 0, 0), ChVector<>(0.24, 0.24, 0.2274)},
-    {"link1", ChVector<>(0, 0, 0.075),    ChVector<>(0, 0, 0), ChVector<>(0.205, 0.26, 0.17)},
-    {"link2", ChVector<>(0.11, 0, 0),     ChVector<>(0, 0, 0), ChVector<>(0.28749, 0.069982, 0.169)},
-    {"link3", ChVector<>(0.12, 0, 0),     ChVector<>(0, 0, 0), ChVector<>(0.289918, 0.06, 0.15)},
-    {"link4", ChVector<>(-0.04, 0, 0),    ChVector<>(0, 0, 0), ChVector<>(0.183046, 0.073212, 0.075543)},
-    {"link5", ChVector<>(0, 0, 0.02),    ChVector<>(0, 0, 0), ChVector<>(0.06, 0.14, 0.238)},
-    {"pad1_link", ChVector<>(-0.035, 0, 0.02),    ChVector<>(0, 0, 0), ChVector<>(0.073966, 0.02, 0.01)},
-    {"pad2_link", ChVector<>(-0.035, 0, 0.02),    ChVector<>(0, 0, 0), ChVector<>(0.073966, 0.02, 0.01)}
+    {"link0", ChVector<>(0.27, 0.469, 0), ChVector<>(0, 0, 0), ChVector<>(0.24, 0.24, 0.2274), "base_Link"},
+    {"link1", ChVector<>(0, 0.075, 0),    ChVector<>(0, 0, 0), ChVector<>(0.205, 0.26, 0.17), "shoulder_Link"},
+    {"link2", ChVector<>(0.11, 0, 0),     ChVector<>(0, 0, 0), ChVector<>(0.28749, 0.069982, 0.169), "elbow_Link"},
+    {"link3", ChVector<>(0.12, 0, 0),     ChVector<>(0, 0, 0), ChVector<>(0.289918, 0.06, 0.15), "pitch_Link"},
+    {"link4", ChVector<>(-0.04, 0, 0),    ChVector<>(0, 0, 0), ChVector<>(0.183046, 0.073212, 0.075543), "roll_Link"},
+    {"link5", ChVector<>(0, 0.02, 0),    ChVector<>(0, 0, 0), ChVector<>(0.06, 0.14, 0.238), "gripper_Link"},
+    {"pad1_link", ChVector<>(-0.035, 0, 0),    ChVector<>(0, 0, 0), ChVector<>(0.073966, 0.02, 0.01), "pad1_Link"},
+    {"pad2_link", ChVector<>(-0.035, 0, 0),    ChVector<>(0, 0, 0), ChVector<>(0.073966, 0.02, 0.01), "pad2_Link"}
 };
 
 JointData scorbot_joints[] = {
-    {"base_joint", "link0", "link1", ChVector<>(0,0,0.2274), ChVector<>(0,0,0), ChVector<>(0,0,1)},
-    {"shoulder_joint", "link1", "link2", ChVector<>(0.0255, 0, 0.13), ChVector<>(-CH_C_PI_2, 0, -CH_C_PI_2), ChVector<>(0,0,1)},
+    {"base_joint", "link0", "link1", ChVector<>(0, 0.2274, 0), ChVector<>(0,0,0), ChVector<>(0,0,1)},
+    {"shoulder_joint", "link1", "link2", ChVector<>(0.0255, 0.13, 0), ChVector<>(-CH_C_PI_2, -CH_C_PI_2, 0), ChVector<>(0,0,1)},
     {"elbow_joint", "link2", "link3", ChVector<>(0.2225, 0, 0), ChVector<>(0,0,0), ChVector<>(0,0,1)},
     {"pitch_joint", "link3", "link4", ChVector<>(0.2225, 0, 0), ChVector<>(1.570796327,0,0), ChVector<>(0,1,0)},
-    {"roll_joint", "link4", "link5", ChVector<>(0,0,0), ChVector<>(0, -1.570796327, 0), ChVector<>(0,0,1)},
-    {"pad1_joint", "link5", "pad1_link", ChVector<>(0, -0.0545, -0.0905), ChVector<>(CH_C_PI_2, -0.74758, -CH_C_PI_2), ChVector<>(0, 0, 1) },
-    {"pad2_joint", "link5", "pad2_link", ChVector<>(0, 0.0545, -0.0905), ChVector<>(-CH_C_PI_2, -0.74758, CH_C_PI_2), ChVector<>(0, 0, -1) }
+    {"roll_joint", "link4", "link5", ChVector<>(0,0,0), ChVector<>(0, 0, -1.570796327), ChVector<>(0,0,1)},
+    {"pad1_joint", "link5", "pad1_link", ChVector<>(0, -0.0905, -0.0545), ChVector<>(CH_C_PI_2, -CH_C_PI_2, -0.74758), ChVector<>(0, 0, 1) },
+    {"pad2_joint", "link5", "pad2_link", ChVector<>(0, -0.0905, 0.0545), ChVector<>(-CH_C_PI_2, CH_C_PI_2, -0.74758), ChVector<>(0, 0, -1) }
 };
 
 
@@ -124,15 +125,32 @@ void AddVisualizationShape(std::shared_ptr<ChBodyAuxRef> body_ptr,
     }
 
     if (type == VisualizationType::MESH){
-        std::string vis_mesh_file = "/home/luning/CollaborateProjects/scorbot/data/obj/base_Link.obj";
+        std::string partname = body_ptr->GetNameString();
+        std::string meshname = LookupLinkData(partname).meshname;
+        std::string vis_mesh_file = "/home/luning/CollaborateProjects/Scorbot/data/obj/" + meshname + ".obj";
+
+
+
         auto trimesh_vis = geometry::ChTriangleMeshConnected::CreateFromWavefrontFile(vis_mesh_file, true, true);
+
+        if (body_ptr->GetNameString().compare("link1") == 0 ){
+            trimesh_vis->Transform(VNULL, Q_from_AngX(-CH_C_PI_2));
+        }
+
+        if (body_ptr->GetNameString().compare("link2") == 0 ){
+            trimesh_vis->Transform(VNULL, Q_from_AngX(-CH_C_PI_2) * Q_from_AngY(-CH_C_PI_2));
+        }
+
+        if (body_ptr->GetNameString().compare("link3") == 0 ){
+            trimesh_vis->Transform(VNULL, Q_from_AngX(-CH_C_PI_2) * Q_from_AngY(-CH_C_PI_2));
+        }
+
 
         auto trimesh_shape = chrono_types::make_shared<ChTriangleMeshShape>();
         trimesh_shape->SetMesh(trimesh_vis);
-        trimesh_shape->SetName("base_Link");
+        // trimesh_shape->SetName("base_Link");
         trimesh_shape->SetMutable(false);
-
-        trimesh_shape->SetColor(ChColor(0.6f, 0, 0));
+        trimesh_shape->SetColor(ChColor(ChRandom(), ChRandom(), ChRandom()));
 
         body_ptr->AddVisualShape(trimesh_shape);
     }
@@ -231,7 +249,7 @@ int main(int argc, char* argv[]) {
         child_body->SetCollide(false);
         child_body->SetInertiaXX(ChVector<>(0.2, 0.2, 0.2)); // TODO: inertia? w.r.t. which axes?
     
-        AddVisualizationShape(child_body, VisualizationType::BOX);
+        AddVisualizationShape(child_body, VisualizationType::MESH);
         sys.Add(child_body);
         
         // insert this to my map
@@ -270,14 +288,13 @@ int main(int argc, char* argv[]) {
     vis->Initialize();
     vis->AddLogo();
     vis->AddSkyBox();
-    vis->AddCamera(ChVector<>(1, 0, 1.5));
+    vis->AddCamera(ChVector<>(1.5, 1.5, -0.5));
     vis->AddTypicalLights();
 
     int frame = 0;
 
     while (vis->Run()) {
         vis->BeginScene();
-        vis->EnableBodyFrameDrawing(true);
         vis->Render();
         tools::drawSegment(vis.get(), ChVector<>(0,0,0), ChVector<>(10,0,0), ChColor(0.6f, 0, 0), true);
         tools::drawSegment(vis.get(), ChVector<>(0,0,0), ChVector<>(0,10,0), ChColor(0, 0.6f, 0), true);
