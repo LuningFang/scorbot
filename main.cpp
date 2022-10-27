@@ -72,6 +72,8 @@ struct JointData{
     ChVector<> origin_xyz;
     ChVector<> origin_rpy;
     ChVector<> axis;
+    double lower_limit;
+    double upper_limit;
 };
 
 const int numLinks = 8;
@@ -84,8 +86,8 @@ LinkData scorbot_links[] = {
     {"link3", ChVector<>(0.12, 0, 0),     ChVector<>(0, 0, 0), ChVector<>(0.289918, 0.06, 0.15), "pitch_Link"},
     {"link4", ChVector<>(-0.04, 0, 0),    ChVector<>(0, 0, 0), ChVector<>(0.183046, 0.073212, 0.075543), "roll_Link"},
     {"link5", ChVector<>(0, 0.02, 0),    ChVector<>(0, 0, 0), ChVector<>(0.06, 0.14, 0.238), "gripper_Link"},
-    {"pad1_link", ChVector<>(-0.035, 0, 0),    ChVector<>(0, 0, 0), ChVector<>(0.073966, 0.02, 0.01), "pad1_Link"},
-    {"pad2_link", ChVector<>(-0.035, 0, 0),    ChVector<>(0, 0, 0), ChVector<>(0.073966, 0.02, 0.01), "pad2_Link"}
+    {"pad1_link", ChVector<>(-0.035, 0, 0),    ChVector<>(0, 0, 0), ChVector<>(0.073966, 0.01, 0.02), "pad1_Link"},
+    {"pad2_link", ChVector<>(-0.035, 0, 0),    ChVector<>(0, 0, 0), ChVector<>(0.073966, 0.01, 0.02), "pad2_Link"}
 };
 
 // JointData scorbot_joints[] = {
@@ -99,17 +101,13 @@ LinkData scorbot_links[] = {
 // };
 
 JointData scorbot_joints[] = {
-    {"base_joint", "link0", "link1", ChVector<>(0.15, 0.2274, 0.15), ChVector<>(0,0,0), ChVector<>(0,0,1)},
-    {"shoulder_joint", "link1", "link2", ChVector<>(0, 0.2, 0.0255), ChVector<>(-CH_C_PI_2, -CH_C_PI_2, 0), ChVector<>(0,0,1)},
-    // {"shoulder_joint", "link1", "link2", ChVector<>(0.0255, 0.13, 0), ChVector<>(-CH_C_PI_4, -CH_C_PI_4, 0), ChVector<>(0,0,1)},
-
-    {"elbow_joint", "link2", "link3", ChVector<>(0, 0, 0.2225), ChVector<>(0,0,0), ChVector<>(0,0,1)},
-    {"pitch_joint", "link3", "link4", ChVector<>(0, 0, 0.2225), ChVector<>(1.570796327,0,0), ChVector<>(0,1,0)},
-    {"roll_joint", "link4", "link5", ChVector<>(0,0,0), ChVector<>(0, 0, -1.570796327), ChVector<>(0,0,1)},
-    // {"pad1_joint", "link5", "pad1_link", ChVector<>(0, -0.0905, -0.0545), ChVector<>(CH_C_PI_2, -CH_C_PI_2, -0.74758), ChVector<>(0, 0, 1) },
-    // {"pad2_joint", "link5", "pad2_link", ChVector<>(0, -0.0905, 0.0545), ChVector<>(-CH_C_PI_2, CH_C_PI_2, -0.74758), ChVector<>(0, 0, -1) }
-    {"pad1_joint", "link5", "pad1_link", ChVector<>(0.0905, -0.0545, 0), ChVector<>(CH_C_PI_2, -CH_C_PI_2, -0.74758), ChVector<>(0, 0, 1) },
-    {"pad2_joint", "link5", "pad2_link", ChVector<>(0.0905,  0.0545, 0), ChVector<>(-CH_C_PI_2, CH_C_PI_2, -0.74758), ChVector<>(0, 0, -1) }
+    {"base_joint", "link0", "link1", ChVector<>(0.15, 0.2274, 0.15), ChVector<>(0,0,0), ChVector<>(0,0,1), -CH_C_PI, CH_C_PI},
+    {"shoulder_joint", "link1", "link2", ChVector<>(0, 0.2, 0.0255), ChVector<>(-CH_C_PI_2, -CH_C_PI_2, 0), ChVector<>(0,0,1), -0.610865, 2.268928},
+    {"elbow_joint", "link2", "link3", ChVector<>(0, 0, 0.2225), ChVector<>(0,0,0), ChVector<>(0,0,1), -2.268928, 2.268928},
+    {"pitch_joint", "link3", "link4", ChVector<>(0.2225, 0, 0), ChVector<>(-1.570796327,0, 0), ChVector<>(0,1,0), -2.268928, 2.268928},
+    {"roll_joint", "link4", "link5", ChVector<>(0,0,0), ChVector<>(CH_C_PI, 0, 0), ChVector<>(0,0,1), -CH_C_PI, CH_C_PI},
+    {"pad1_joint", "link5", "pad1_link", ChVector<>(0, -0.0905, -0.0545), ChVector<>(CH_C_PI_2, 0.74758, CH_C_PI_2), ChVector<>(0, 0, 1), 0, CH_C_PI_2},
+    {"pad2_joint", "link5", "pad2_link", ChVector<>(0, -0.0905,  0.0545), ChVector<>(CH_C_PI_2, -0.74758, CH_C_PI_2), ChVector<>(0, 0, -1), 0, CH_C_PI_2 }
 
 };
 
@@ -149,38 +147,16 @@ void AddVisualizationShape(std::shared_ptr<ChBodyAuxRef> body_ptr,
 
         auto trimesh_vis = geometry::ChTriangleMeshConnected::CreateFromWavefrontFile(vis_mesh_file, true, true);
         
-        if (body_ptr->GetNameString() == "link1"){
-            // trimesh_vis->Transform(ChVector<>(0.12, 0, 0.12), Q_from_AngX(-CH_C_PI_2));
-            trimesh_vis->Transform(ChVector<>(0,0,0), Q_from_AngX(-CH_C_PI_2));
-
-        }
-
-        if (body_ptr->GetNameString() == "link0"){
-            trimesh_vis->Transform(VNULL, Q_from_AngX(-CH_C_PI_2));
-        }
-
         if (body_ptr->GetNameString() == "link2"){
             trimesh_vis->Transform(VNULL, Q_from_AngX(-CH_C_PI_2) * Q_from_AngY(-CH_C_PI_2));
         }
 
-        if (body_ptr->GetNameString() == "link3"){
+        else if (body_ptr->GetNameString() == "link3"){
+            trimesh_vis->Transform(VNULL, Q_from_AngZ(CH_C_PI_2));
+        }
+
+        else {
             trimesh_vis->Transform(VNULL, Q_from_AngX(-CH_C_PI_2));
-        }
-
-        if (body_ptr->GetNameString() == "link4"){
-            trimesh_vis->Transform(VNULL, Q_from_AngZ(-CH_C_PI_2));
-        }
-
-        if (body_ptr->GetNameString() == "link5"){
-            trimesh_vis->Transform(VNULL, Q_from_AngY(-CH_C_PI_2));
-        }
-
-        if (body_ptr->GetNameString() == "pad1_link"){
-            trimesh_vis->Transform(VNULL, Q_from_AngY(-CH_C_PI_2) * Q_from_AngX(CH_C_PI_2) * Q_from_AngY(CH_C_PI_2));
-        }
-
-        if (body_ptr->GetNameString() == "pad2_link"){
-            trimesh_vis->Transform(VNULL, Q_from_AngY(-CH_C_PI_2) * Q_from_AngX(CH_C_PI_2));
         }
 
 
@@ -213,7 +189,7 @@ std::shared_ptr<ChBodyAuxRef> createChildAuxRef(ChQuaternion<> parent_quat,
                                                 int i // joint id (start from 0)
                                                 ){
     auto child = chrono_types::make_shared<ChBodyAuxRef>();
-    ChQuaternion<> joint_quat = rpy2quat(scorbot_joints[i].origin_rpy); // this need to be changed ...
+    ChQuaternion<> joint_quat = parent_quat * rpy2quat(scorbot_joints[i].origin_rpy); // this need to be changed ...
 
     // perform transformation using quaternion to get global location of the joint
     ChVector<double> joint_location_global = parent_location + parent_quat.Rotate(scorbot_joints[i].origin_xyz);
@@ -238,7 +214,7 @@ int main(int argc, char* argv[]) {
     // start with prototype
     bool useMesh = false;
     // ChVector<float> gravity(0, 0, 9.81);
-    ChVector<float> gravity(0, 0, -9.81);
+    ChVector<float> gravity(0, 0, 0);
     sys.Set_G_acc(gravity);
     double step_size = 1e-3; // 1e-3 in world.skel which one?
 
@@ -285,7 +261,7 @@ int main(int argc, char* argv[]) {
         child_body->SetNameString(scorbot_joints[i].link_child);
 
         // std::cout << "child name: " << child_body->GetNameString() << " absolute position of COG: " << child_body->GetFrame_COG_to_abs() << std::endl;
-        child_body->SetBodyFixed(true);
+        child_body->SetBodyFixed(false);
         child_body->SetMass(mass_link1);  // TODO mass
         child_body->SetCollide(false);
         child_body->SetInertiaXX(ChVector<>(0.2, 0.2, 0.2)); // TODO: inertia? w.r.t. which axes?
@@ -300,6 +276,19 @@ int main(int argc, char* argv[]) {
 
         // insert this to my map
         name_link_map[child_body->GetNameString()] = child_body;
+
+        if (i == 0 || i == 1 || i == 2){
+            // revolute joint motor between base and shoulder
+            auto rev_base_shoulder = chrono_types::make_shared<ChLinkMotorRotationSpeed>();
+            rev_base_shoulder->Initialize(parent_body, child_body, ChFrame<>(child_body->GetFrame_REF_to_abs().GetPos(), child_body->GetFrame_REF_to_abs().GetRot() * Q_from_AngX(CH_C_PI_2) ));
+            auto mwspeed =
+                chrono_types::make_shared<ChFunction_Const>(CH_C_PI_4);  // constant angular speed, in [rad/s], 1PI/s =180°/s
+
+            rev_base_shoulder->SetSpeedFunction(mwspeed);
+            sys.AddLink(rev_base_shoulder);
+
+        }
+
     }
 
     // revolute joint motor between base and shoulder
