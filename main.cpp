@@ -12,10 +12,9 @@
 // Authors: Luning Fang
 // =============================================================================
 //
-// todo: motor at revolute joint
-// gaits
-// record contact force (Callback)
-// use 13cm ones
+// scorbot model
+// irrlicht visualize with global y pointing up, transformation needed 
+// todo: driver input actuation file
 // =============================================================================
 
 #include "chrono/core/ChStream.h"
@@ -76,7 +75,7 @@ struct JointData{
 };
 
 const int numLinks = 8;
-const int numJoints = 3;
+const int numJoints = 7;
 
 LinkData scorbot_links[] = {
     {"link0", ChVector<>(0.27, 0.469, 0), ChVector<>(0, 0, 0), ChVector<>(0.24, 0.24, 0.2274), "base_Link"},
@@ -89,15 +88,31 @@ LinkData scorbot_links[] = {
     {"pad2_link", ChVector<>(-0.035, 0, 0),    ChVector<>(0, 0, 0), ChVector<>(0.073966, 0.02, 0.01), "pad2_Link"}
 };
 
+// JointData scorbot_joints[] = {
+//     {"base_joint", "link0", "link1", ChVector<>(0, 0.2274, 0), ChVector<>(0,0,0), ChVector<>(0,0,1)},
+//     {"shoulder_joint", "link1", "link2", ChVector<>(0.0255, 0.13, 0), ChVector<>(-CH_C_PI_2, -CH_C_PI_2, 0), ChVector<>(0,0,1)},
+//     {"elbow_joint", "link2", "link3", ChVector<>(0.2225, 0, 0), ChVector<>(0,0,0), ChVector<>(0,0,1)},
+//     {"pitch_joint", "link3", "link4", ChVector<>(0.2225, 0, 0), ChVector<>(1.570796327,0,0), ChVector<>(0,1,0)},
+//     {"roll_joint", "link4", "link5", ChVector<>(0,0,0), ChVector<>(0, 0, -1.570796327), ChVector<>(0,0,1)},
+//     {"pad1_joint", "link5", "pad1_link", ChVector<>(0, -0.0905, -0.0545), ChVector<>(CH_C_PI_2, -CH_C_PI_2, -0.74758), ChVector<>(0, 0, 1) },
+//     {"pad2_joint", "link5", "pad2_link", ChVector<>(0, -0.0905, 0.0545), ChVector<>(-CH_C_PI_2, CH_C_PI_2, -0.74758), ChVector<>(0, 0, -1) }
+// };
+
 JointData scorbot_joints[] = {
-    {"base_joint", "link0", "link1", ChVector<>(0, 0.2274, 0), ChVector<>(0,0,0), ChVector<>(0,0,1)},
-    {"shoulder_joint", "link1", "link2", ChVector<>(0.0255, 0.13, 0), ChVector<>(-CH_C_PI_2, -CH_C_PI_2, 0), ChVector<>(0,0,1)},
-    {"elbow_joint", "link2", "link3", ChVector<>(0.2225, 0, 0), ChVector<>(0,0,0), ChVector<>(0,0,1)},
-    {"pitch_joint", "link3", "link4", ChVector<>(0.2225, 0, 0), ChVector<>(1.570796327,0,0), ChVector<>(0,1,0)},
+    {"base_joint", "link0", "link1", ChVector<>(0.15, 0.2274, 0.15), ChVector<>(0,0,0), ChVector<>(0,0,1)},
+    {"shoulder_joint", "link1", "link2", ChVector<>(0, 0.2, 0.0255), ChVector<>(-CH_C_PI_2, -CH_C_PI_2, 0), ChVector<>(0,0,1)},
+    // {"shoulder_joint", "link1", "link2", ChVector<>(0.0255, 0.13, 0), ChVector<>(-CH_C_PI_4, -CH_C_PI_4, 0), ChVector<>(0,0,1)},
+
+    {"elbow_joint", "link2", "link3", ChVector<>(0, 0, 0.2225), ChVector<>(0,0,0), ChVector<>(0,0,1)},
+    {"pitch_joint", "link3", "link4", ChVector<>(0, 0, 0.2225), ChVector<>(1.570796327,0,0), ChVector<>(0,1,0)},
     {"roll_joint", "link4", "link5", ChVector<>(0,0,0), ChVector<>(0, 0, -1.570796327), ChVector<>(0,0,1)},
-    {"pad1_joint", "link5", "pad1_link", ChVector<>(0, -0.0905, -0.0545), ChVector<>(CH_C_PI_2, -CH_C_PI_2, -0.74758), ChVector<>(0, 0, 1) },
-    {"pad2_joint", "link5", "pad2_link", ChVector<>(0, -0.0905, 0.0545), ChVector<>(-CH_C_PI_2, CH_C_PI_2, -0.74758), ChVector<>(0, 0, -1) }
+    // {"pad1_joint", "link5", "pad1_link", ChVector<>(0, -0.0905, -0.0545), ChVector<>(CH_C_PI_2, -CH_C_PI_2, -0.74758), ChVector<>(0, 0, 1) },
+    // {"pad2_joint", "link5", "pad2_link", ChVector<>(0, -0.0905, 0.0545), ChVector<>(-CH_C_PI_2, CH_C_PI_2, -0.74758), ChVector<>(0, 0, -1) }
+    {"pad1_joint", "link5", "pad1_link", ChVector<>(0.0905, -0.0545, 0), ChVector<>(CH_C_PI_2, -CH_C_PI_2, -0.74758), ChVector<>(0, 0, 1) },
+    {"pad2_joint", "link5", "pad2_link", ChVector<>(0.0905,  0.0545, 0), ChVector<>(-CH_C_PI_2, CH_C_PI_2, -0.74758), ChVector<>(0, 0, -1) }
+
 };
+
 
 
 // given link name, return LinkData, note that this is for child only, parent is based on previous result!
@@ -115,6 +130,7 @@ LinkData LookupLinkData(std::string linkname){
 // add visual assets to the body
 void AddVisualizationShape(std::shared_ptr<ChBodyAuxRef> body_ptr,
                            VisualizationType type){
+
     if (type == VisualizationType::BOX){
         auto box_shape = chrono_types::make_shared<ChBoxShape>();
         box_shape->GetBoxGeometry().SetLengths(LookupLinkData(body_ptr->GetNameString()).dim);
@@ -132,27 +148,51 @@ void AddVisualizationShape(std::shared_ptr<ChBodyAuxRef> body_ptr,
 
 
         auto trimesh_vis = geometry::ChTriangleMeshConnected::CreateFromWavefrontFile(vis_mesh_file, true, true);
+        
+        if (body_ptr->GetNameString() == "link1"){
+            // trimesh_vis->Transform(ChVector<>(0.12, 0, 0.12), Q_from_AngX(-CH_C_PI_2));
+            trimesh_vis->Transform(ChVector<>(0,0,0), Q_from_AngX(-CH_C_PI_2));
 
-        if (body_ptr->GetNameString().compare("link1") == 0 ){
+        }
+
+        if (body_ptr->GetNameString() == "link0"){
             trimesh_vis->Transform(VNULL, Q_from_AngX(-CH_C_PI_2));
         }
 
-        if (body_ptr->GetNameString().compare("link2") == 0 ){
+        if (body_ptr->GetNameString() == "link2"){
             trimesh_vis->Transform(VNULL, Q_from_AngX(-CH_C_PI_2) * Q_from_AngY(-CH_C_PI_2));
         }
 
-        if (body_ptr->GetNameString().compare("link3") == 0 ){
-            trimesh_vis->Transform(VNULL, Q_from_AngX(-CH_C_PI_2) * Q_from_AngY(-CH_C_PI_2));
+        if (body_ptr->GetNameString() == "link3"){
+            trimesh_vis->Transform(VNULL, Q_from_AngX(-CH_C_PI_2));
+        }
+
+        if (body_ptr->GetNameString() == "link4"){
+            trimesh_vis->Transform(VNULL, Q_from_AngZ(-CH_C_PI_2));
+        }
+
+        if (body_ptr->GetNameString() == "link5"){
+            trimesh_vis->Transform(VNULL, Q_from_AngY(-CH_C_PI_2));
+        }
+
+        if (body_ptr->GetNameString() == "pad1_link"){
+            trimesh_vis->Transform(VNULL, Q_from_AngY(-CH_C_PI_2) * Q_from_AngX(CH_C_PI_2) * Q_from_AngY(CH_C_PI_2));
+        }
+
+        if (body_ptr->GetNameString() == "pad2_link"){
+            trimesh_vis->Transform(VNULL, Q_from_AngY(-CH_C_PI_2) * Q_from_AngX(CH_C_PI_2));
         }
 
 
         auto trimesh_shape = chrono_types::make_shared<ChTriangleMeshShape>();
         trimesh_shape->SetMesh(trimesh_vis);
-        // trimesh_shape->SetName("base_Link");
         trimesh_shape->SetMutable(false);
         trimesh_shape->SetColor(ChColor(ChRandom(), ChRandom(), ChRandom()));
+        // trimesh_shape->SetColor(ChColor(1,1,1));
 
         body_ptr->AddVisualShape(trimesh_shape);
+        
+
     }
 
     if (type == VisualizationType::CYLINDER){
@@ -221,16 +261,18 @@ int main(int argc, char* argv[]) {
     LinkData base_link_data = scorbot_links[0];
     base_link->SetNameString(base_link_data.name);
     base_link->SetFrame_REF_to_abs(ChFrame<>(base_link_data.origin_xyz, rpy2quat(base_link_data.origin_rpy)));
-    base_link->SetFrame_COG_to_REF(ChFrame<>(ChVector<>(0, 0, 0.1137), ChQuaternion<>(1,0,0,0)));  
+    base_link->SetFrame_COG_to_REF(ChFrame<>(ChVector<>(0, 0.1137, 0), ChQuaternion<>(1,0,0,0)));  
 
     base_link->SetBodyFixed(true);
     base_link->SetCollide(false);
     base_link->SetMass(mass_base);
     base_link->SetInertiaXX(ChVector<>(0.2, 0.2, 0.2)); // TODO: inertia? w.r.t. which axes?
     
-    AddVisualizationShape(base_link, VisualizationType::BOX);
+    AddVisualizationShape(base_link, VisualizationType::MESH);
     sys.Add(base_link);
-    std::cout << "link 0 absolute position of COG: " << base_link->GetFrame_COG_to_abs() << std::endl;
+    std::cout << base_link->GetNameString() << " Absolute position of COG: " << base_link->GetFrame_COG_to_abs() << std::endl;
+    std::cout << base_link->GetNameString() << " Absolute position of AUX: " << base_link->GetFrame_REF_to_abs() << std::endl;
+
     // insert this to my map
     name_link_map[base_link_data.name] = base_link;
 
@@ -238,7 +280,6 @@ int main(int argc, char* argv[]) {
         // find body pointer 
         std::string parent_name = scorbot_joints[i].link_parent;
         std::shared_ptr<ChBodyAuxRef> parent_body = name_link_map.find(parent_name)->second; // parent body
-
 
         std::shared_ptr<ChBodyAuxRef> child_body  = createChildAuxRef(parent_body->GetFrame_REF_to_abs().GetRot(), parent_body->GetFrame_REF_to_abs().GetPos(), i);
         child_body->SetNameString(scorbot_joints[i].link_child);
@@ -252,10 +293,13 @@ int main(int argc, char* argv[]) {
         AddVisualizationShape(child_body, VisualizationType::MESH);
         sys.Add(child_body);
         
+        std::cout << child_body->GetNameString() << " Absolute position of COG: " << child_body->GetFrame_COG_to_abs() << std::endl;
+        std::cout << child_body->GetNameString() << " Absolute position of AUX: " << child_body->GetFrame_REF_to_abs() << std::endl;
+
+
+
         // insert this to my map
         name_link_map[child_body->GetNameString()] = child_body;
-
-
     }
 
     // revolute joint motor between base and shoulder
@@ -288,7 +332,7 @@ int main(int argc, char* argv[]) {
     vis->Initialize();
     vis->AddLogo();
     vis->AddSkyBox();
-    vis->AddCamera(ChVector<>(1.5, 1.5, -0.5));
+    vis->AddCamera(ChVector<>(1, 1.5, 0.5));
     vis->AddTypicalLights();
 
     int frame = 0;
@@ -296,6 +340,7 @@ int main(int argc, char* argv[]) {
     while (vis->Run()) {
         vis->BeginScene();
         vis->Render();
+        // vis->EnableBodyFrameDrawing(true);
         tools::drawSegment(vis.get(), ChVector<>(0,0,0), ChVector<>(10,0,0), ChColor(0.6f, 0, 0), true);
         tools::drawSegment(vis.get(), ChVector<>(0,0,0), ChVector<>(0,10,0), ChColor(0, 0.6f, 0), true);
         tools::drawSegment(vis.get(), ChVector<>(0,0,0), ChVector<>(0,0,10), ChColor(0, 0, 0.6f), true);
